@@ -226,20 +226,26 @@
             const sendButton = document.getElementById('send-button');
             const statusIndicator = document.getElementById('connection-status');
             
-            // Проверка подключения к Android приложению
-            let isAndroidApp = false;
+            // Флаг подключения к Android
+            let isAndroidConnected = false;
             
+            // Проверка подключения к Android
             function checkAndroidConnection() {
-                if (window.AndroidInterface && typeof window.AndroidInterface.sendMessageToApp === 'function') {
-                    isAndroidApp = true;
-                    statusIndicator.textContent = "✓ Подключено к приложению";
-                    statusIndicator.classList.add('online');
-                    return true;
-                } else {
-                    statusIndicator.textContent = "Веб-версия чата";
-                    statusIndicator.classList.remove('online');
-                    return false;
+                try {
+                    if (typeof AndroidInterface !== 'undefined' && AndroidInterface) {
+                        isAndroidConnected = true;
+                        statusIndicator.textContent = "✓ Подключено к приложению";
+                        statusIndicator.classList.add('online');
+                        return true;
+                    }
+                } catch (e) {
+                    // Если AndroidInterface не доступен
                 }
+                
+                isAndroidConnected = false;
+                statusIndicator.textContent = "Веб-версия чата";
+                statusIndicator.classList.remove('online');
+                return false;
             }
             
             // Добавление сообщения в чат
@@ -255,53 +261,57 @@
             // Отправка сообщения
             function sendMessage() {
                 const message = messageInput.value.trim();
-                if (message) {
-                    addMessage(message, true);
-                    messageInput.value = '';
-                    
-                    if (checkAndroidConnection()) {
-                        try {
-                            window.AndroidInterface.sendMessageToApp(message);
-                        } catch (e) {
-                            console.error("Ошибка отправки в приложение:", e);
-                            addMessage("Ошибка отправки сообщения", false);
-                        }
-                    } else {
-                        // Симуляция ответа в веб-версии
-                        setTimeout(() => {
-                            const responses = [
-                                "Спасибо за ваше сообщение!",
-                                "Интересное замечание!",
-                                "Мы учтем ваше мнение.",
-                                "Продолжайте в том же духе!",
-                                "Благодарим за участие в чате!"
-                            ];
-                            const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-                            addMessage(randomResponse, false);
-                        }, 800);
+                if (!message) return;
+                
+                addMessage(message, true);
+                messageInput.value = '';
+                
+                if (checkAndroidConnection()) {
+                    try {
+                        AndroidInterface.sendMessageToApp(message);
+                    } catch (e) {
+                        console.error("Ошибка отправки в приложение:", e);
+                        addMessage("Ошибка связи с приложением", false);
                     }
+                } else {
+                    // Заглушка для веб-версии
+                    setTimeout(() => {
+                        const responses = [
+                            "Спасибо за сообщение!",
+                            "Интересное замечание!",
+                            "Мы учтем ваше мнение"
+                        ];
+                        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                        addMessage(randomResponse, false);
+                    }, 800);
                 }
             }
             
-            // Инициализация чата
+            // Инициализация
             checkAndroidConnection();
             
             // Обработчики событий
             sendButton.addEventListener('click', sendMessage);
-            
-            messageInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    sendMessage();
-                }
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
             });
             
-            // Функция для получения сообщений из приложения
+            // Функция для приема сообщений из приложения
             window.receiveMessageFromApp = function(message) {
                 addMessage(message, false);
             };
             
             // Периодическая проверка соединения
-            setInterval(checkAndroidConnection, 5000);
+            setInterval(checkAndroidConnection, 3000);
+            
+            // Сообщаем приложению, что страница загружена
+            try {
+                if (typeof AndroidInterface !== 'undefined' && AndroidInterface) {
+                    AndroidInterface.pageLoaded();
+                }
+            } catch (e) {
+                console.log("WebView not connected");
+            }
         });
     </script>
 </body>

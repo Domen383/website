@@ -219,74 +219,81 @@
         </footer>
     </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const chatMessages = document.getElementById('chat-messages');
-        const messageInput = document.getElementById('message-input');
-        const sendButton = document.getElementById('send-button');
-        const statusIndicator = document.getElementById('connection-status');
-        
-        let isAndroidApp = false;
-        
-        function checkAndroidConnection() {
-            if (window.AndroidInterface && typeof AndroidInterface.sendMessageToApp === 'function') {
-                isAndroidApp = true;
-                statusIndicator.textContent = "✓ Подключено к приложению";
-                statusIndicator.classList.add('online');
-            } else {
-                statusIndicator.textContent = "Веб-версия чата";
-            }
-        }
-        
-        function addMessage(text, isUser) {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message');
-            messageDiv.classList.add(isUser ? 'user-message' : 'bot-message');
-            messageDiv.textContent = text;
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-        
-        function sendMessage() {
-            const message = messageInput.value.trim();
-            if (message) {
-                addMessage(message, true);
-                messageInput.value = '';
-                
-                if (isAndroidApp) {
-                    try {
-                        AndroidInterface.sendMessageToApp(message);
-                    } catch (e) {
-                        console.error("Ошибка отправки в приложение:", e);
-                        addMessage("Ошибка отправки сообщения", false);
-                    }
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageInput = document.getElementById('message-input');
+            const sendButton = document.getElementById('send-button');
+            const statusIndicator = document.getElementById('connection-status');
+            
+            // Проверка подключения к Android приложению
+            let isAndroidApp = false;
+            
+            function checkAndroidConnection() {
+                if (window.AndroidInterface && typeof window.AndroidInterface.sendMessageToApp === 'function') {
+                    isAndroidApp = true;
+                    statusIndicator.textContent = "✓ Подключено к приложению";
+                    statusIndicator.classList.add('online');
+                    return true;
                 } else {
-                    setTimeout(() => {
-                        const responses = [
-                            "Спасибо за ваше сообщение!",
-                            "Интересное замечание!",
-                            "Мы учтем ваше мнение."
-                        ];
-                        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-                        addMessage(randomResponse, false);
-                    }, 800);
+                    statusIndicator.textContent = "Веб-версия чата";
+                    statusIndicator.classList.remove('online');
+                    return false;
                 }
             }
-        }
-        
-        // Инициализация
-        checkAndroidConnection();
-        
-        sendButton.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
+            
+            // Добавление сообщения в чат
+            function addMessage(text, isUser) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                messageDiv.classList.add(isUser ? 'user-message' : 'bot-message');
+                messageDiv.textContent = text;
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             }
-        });
-        
-        setInterval(checkAndroidConnection, 5000);
-    });
-</script>
+            
+            // Отправка сообщения
+            function sendMessage() {
+                const message = messageInput.value.trim();
+                if (message) {
+                    addMessage(message, true);
+                    messageInput.value = '';
+                    
+                    if (checkAndroidConnection()) {
+                        try {
+                            window.AndroidInterface.sendMessageToApp(message);
+                        } catch (e) {
+                            console.error("Ошибка отправки в приложение:", e);
+                            addMessage("Ошибка отправки сообщения", false);
+                        }
+                    } else {
+                        // Симуляция ответа в веб-версии
+                        setTimeout(() => {
+                            const responses = [
+                                "Спасибо за ваше сообщение!",
+                                "Интересное замечание!",
+                                "Мы учтем ваше мнение.",
+                                "Продолжайте в том же духе!",
+                                "Благодарим за участие в чате!"
+                            ];
+                            const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                            addMessage(randomResponse, false);
+                        }, 800);
+                    }
+                }
+            }
+            
+            // Инициализация чата
+            checkAndroidConnection();
+            
+            // Обработчики событий
+            sendButton.addEventListener('click', sendMessage);
+            
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
             
             // Функция для получения сообщений из приложения
             window.receiveMessageFromApp = function(message) {
